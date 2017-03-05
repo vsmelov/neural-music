@@ -3,68 +3,81 @@
 import os
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
-music_dir = os.path.join(base_dir, 'music-3')
-data_dir = os.path.join(base_dir, 'data-3')
+data_dir = os.path.join(base_dir, 'data-mel-autoencoder-3')
 
 weights_dir = os.path.join(data_dir, 'weights')
 weights_file = os.path.join(weights_dir, 'weights')
+weights_conv_file = os.path.join(weights_dir, 'weightsCONV')
+weights_lstm_file = os.path.join(weights_dir, 'weightsLSTM')
+
+music_dir = os.path.join(data_dir, 'music')
+music_file = os.path.join(weights_dir, 'music')
 
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 if not os.path.exists(weights_dir):
     os.makedirs(weights_dir)
 
-# choice of rectangular, hanning, hamming, blackman, blackmanharris
-window = 'hanning'
-
-N = 2*512  # fft size, must be power of 2 and >= M
-M = N-1   # window size
-H = int(M / 2)  # hop size
+N = 1024 * 2
+M = N
 fs = 44100
+H = round(N / 2.0)  # hop size
 NN = N / 2 + 1  # number of meaning-ful Fourier coefficients
 
-# границы слышимости человека
-min_freq = 20
-max_freq = 20000
-
-# привычные границы слышимости
-min_freq = 20
-max_freq = 8000
-
-min_freq = 0
-max_freq = 4000
-
-# минимальные и максимальные номера коэффициентов Фурье
-# соответствующие ограничениям на спектр
-min_k = int(min_freq * N / fs)
-max_k = int(max_freq * N / fs)
-NP = max_k - min_k
-print 'NP: {}'.format(NP)
-
-zero_db = -80  # граница слышимости
+# Sin Model
+sin_t = -80
+# minSineDur = 0.001
+minSineDur = 0.025
+maxnSines = 200
+freqDevOffset = 50
+freqDevSlope = 0.001
+Ns = N  # size of fft used in synthesis
 
 mem_sec = 3
 mem_n = int(mem_sec * fs / H)
-gen_time = 5*60
+
+gen_time = 1 * 60 / 10
 sequence_length = int(gen_time * fs / H)
 print 'sequence_length: {}'.format(sequence_length)
 
+
 # DataSet Vectorization params
-max_sentence_duration = 1.5  # seconds
-max_sentence_len = int(fs * max_sentence_duration / H)
-sentences_overlapping = 0.25
-sentences_step = int(max_sentence_len * (1 - sentences_overlapping))
+max_sentence_duration = 1  # 40 * H / fs  # seconds
+print 'max_sentence_duration: {}'.format(max_sentence_duration)
+max_sentence_len = int(round(fs * max_sentence_duration / H))
+max_sentence_len = 64+1  # 1 + (max_sentence_len // 2) * 2
+print 'max_sentence_len: {}'.format(max_sentence_len)
+# sentences_overlapping = 0.85
+sentences_step = 1  # int(max_sentence_len * (1 - sentences_overlapping))
+print 'sentences_step: {}'.format(sentences_step)
+assert sentences_step > 0
 
 # сколько фреймов пропустим для анализа в начале каждой проверки,
 # чтобы прогреть нейронку и дать ей
 # угадать мелодию перед тем как делать предсказания
 skip_first = 0
 
+window = 'hamming'
+zero_db = -160
+hN = (N / 2) + 1
 
-# Sin Model
-sin_t = -80
-minSineDur = 0.001
-maxnSines = 200
-freqDevOffset = 50
-freqDevSlope = 0.001
-Ns = N  # size of fft used in synthesisNs = 512  # size of fft used in synthesis
+
+PREPARE_USING_MEL = False
+if PREPARE_USING_MEL:
+    Nmel = 128
+# привычные границы слышимости
+min_freq = 0
+max_freq = 8000
+
+PREPARE_USING_CROP_FFT = False
+if PREPARE_USING_CROP_FFT:
+    min_k = int(min_freq * N / fs)
+    max_k = int(max_freq * N / fs)
+    print 'max_k - min_k: {}'.format(max_k - min_k)
+
+PREPARE_USING_FFT = True
+PREPARE_USING_SQUARED_FFT = False
+
+n_features = 16
+NP = n_features
+Nin = NN

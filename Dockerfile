@@ -11,6 +11,9 @@ RUN apt-get update
 
 RUN apt-get -y install python-pip python-dev
 
+# for scipy and numpy
+RUN apt-get -y install libblas-dev liblapack-dev libatlas-base-dev gfortran
+
 #RUN apt-get -y install lame libmp3lame0  # mp3 processing
 RUN apt-get -y install sox libsox-fmt-all  # the Swiss Army knife of sound processing programs and additional libs for different audio-formats
 #RUN pip install sox  # Python wrapper around sox
@@ -55,7 +58,13 @@ RUN git clone https://github.com/fchollet/keras.git
 # WARN: keras bug!
 # TODO: wait until fix, and remove this
 # https://github.com/fchollet/keras/commit/99bd066f38ac9603a5c00b2eab57f6d15412ddc2
-RUN sed -i "116s/.*/            if K.backend() == 'tensorflow':/" /keras/keras/layers/wrappers.py
+# RUN sed -i "116s/.*/            if K.backend() == 'tensorflow':/" /keras/keras/layers/wrappers.py
+
+# BUG: wait until fix, and remove this
+# https://github.com/fchollet/keras/issues/4394
+# RUN sed -i "113s/.*/            pass/" /keras/keras/regularizers.py
+# sed -i "113s/.*/            pass/" /usr/local/lib/python2.7/dist-packages/Keras-1.1.1-py2.7.egg/keras/regularizers.py
+
 RUN cd /keras && python setup.py install
 
 # helps keras to find libcudnn

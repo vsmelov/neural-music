@@ -47,7 +47,7 @@ def stft(x, w, N, H):
 #                         ])
 
 
-def stftAnal(x, w, N, H):
+def stftAnal(x, w, N, H, db=True, zero_phase_windowing=True):
     """
     Analysis of a sound using the short-time Fourier transform
     x: input array sound, w: analysis window, N: FFT size, H: hop size
@@ -59,16 +59,18 @@ def stftAnal(x, w, N, H):
     M = w.size  # size of analysis window
     hM1 = int(math.floor((M + 1) / 2))  # half analysis window size by rounding
     hM2 = int(math.floor(M / 2))  # half analysis window size by floor
-    x = np.append(np.zeros(hM2),
-                  x)  # add zeros at beginning to center first window at sample 0
-    x = np.append(x,
-                  np.zeros(hM2))  # add zeros at the end to analyze last sample
+    # x = np.append(np.zeros(hM2),
+    #               x)  # add zeros at beginning to center first window at sample 0
+    # x = np.append(x,
+    #               np.zeros(hM2))  # add zeros at the end to analyze last sample
     pin = hM1  # initialize sound pointer in middle of analysis window
     pend = x.size - hM1  # last sample to start a frame
     w = w / sum(w)  # normalize analysis window
     while pin <= pend:  # while sound pointer is smaller than last sample
         x1 = x[pin - hM1:pin + hM2]  # select one frame of input sound
-        mX, pX = DFT.dftAnal(x1, w, N)  # compute dft
+        # print 'stft x1: {}'.format(x1)
+        # print 'stft w: {}'.format(w)
+        mX, pX = DFT.dftAnal(x1, w, N, db, zero_phase_windowing)  # compute dft
         if pin == hM1:  # if first frame create output arrays
             xmX = np.array([mX])
             xpX = np.array([pX])
@@ -76,6 +78,7 @@ def stftAnal(x, w, N, H):
             xmX = np.vstack((xmX, np.array([mX])))
             xpX = np.vstack((xpX, np.array([pX])))
         pin += H  # advance sound pointer
+        # print ''
     return xmX, xpX
 
 

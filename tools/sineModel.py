@@ -335,15 +335,26 @@ def XXsineModelSynth(tfreq, tmag, N, H, fs):
     sw[hN - H:hN + H] = sw[hN - H:hN + H] / bh[hN - H:hN + H]  # normalized synthesis window
     lastytfreq = tfreq[0, :]  # initialize synthesis frequencies
     ytphase = 2 * np.pi * np.random.rand(tfreq[0, :].size)  # initialize synthesis phases
-    # ytphase = np.zeros(tfreq[0, :].size)  # initialize synthesis phases
-    for l in range(L):  # iterate over all frames
+    for l in range(L-1):  # iterate over all frames
         ytphase += (np.pi * (lastytfreq + tfreq[l, :]) / fs) * H  # propagate phases
         ytphase = ytphase % (2 * np.pi)  # make phase inside 2*pi
         Y = UF.genSpecSines(tfreq[l, :], tmag[l, :], ytphase, N, fs)  # generate sines in the spectrum
         lastytfreq = tfreq[l, :]  # save frequency for phase propagation
         yw = np.real(fftshift(ifft(Y)))  # compute inverse FFT
+        # print 'y.shape: {}, sw.shape: {}, yw.shape: {}'.format(
+        #     y.shape,
+        #     sw.shape,
+        #     yw.shape,
+        # )
+        # print 'tfreq[l, :] - {}'.format(tfreq[l, :])
+        # print 'tmag[l, :] - {}'.format(tmag[l, :])
+        # print 'yw: {}'.format(yw)
         y[pout:pout + N] += sw * yw  # overlap-add and apply a synthesis window
+        # exit()
         pout += H  # advance sound pointer
+        # if pout > L:
+        #     print 'BREAK on pout: {}, L: {}'.format(pout, L)
+        #     break
     y = np.delete(y, range(hN))  # delete half of first window
     y = np.delete(y, range(y.size - hN, y.size))  # delete half of the last window
     return y

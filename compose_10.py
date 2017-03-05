@@ -7,7 +7,7 @@ from model.get_model import get_model
 from tools.mX2x import crop_fft2audio, mel2audio
 import tools.utilFunctions as UF
 
-X = np.load(os.path.join(data_dir, 'X.npy'))
+X = np.load(os.path.join(data_dir, 'X10.npy'))
 shift_data = np.loadtxt(os.path.join(data_dir, 'shift_data.txt'))
 var_data = np.loadtxt(os.path.join(data_dir, 'var_data.txt'))
 
@@ -16,8 +16,7 @@ print 'X.shape: {}'.format(X.shape)
 print('NP = {}'.format(NP))
 assert X.shape[2] == NP
 
-model = get_model(NP, stateful=True)
-# model = get_model(NP)
+model = get_model(load_wights=1, f_weights=weights_file+'LSTM', stateful=True)
 print('model.summary() = {}'.format(model.summary()))
 print('model.get_config() = {}'.format(model.get_config()))
 
@@ -26,6 +25,7 @@ def generate_copy_seed_sequence(training_data):
     num_examples = training_data.shape[0]
     # TODO: random choice or may be linear combination
     randIdx = np.random.randint(num_examples, size=1)[0]
+    print 'randIdx: {}'.format(randIdx)
     randSeed = training_data[randIdx, :, :]
     seedSeq = np.reshape(randSeed, (1, randSeed.shape[0], randSeed.shape[1]))
     return seedSeq
@@ -64,17 +64,16 @@ def xxgenerate_from_seed(model, seed, sequence_length):
         output.append(prediction[0][0].copy())
 
         # add some noise for prevent from cycling in one tact
-        if it and it % 2000 == 0:
+        if it and it % 80 == 0:
             model.reset_states()
-            print 'reset'
+            print 'reset'*10
 
-        if it % 500 < 75:
-            prediction[0][0] += (np.random.random_sample(
-                prediction[0][0].shape) - 0.5) * 4
+        if it % 40 < 10:
+            prediction[0][0] *= 1 + (np.random.random_sample(
+                prediction[0][0].shape) - 0.5) * 2 * 0.2
         else:
-            pass
-            # prediction[0][0] += (np.random.random_sample(
-            #     prediction[0][0].shape) - 0.5) * 0.5
+            prediction[0][0] *= 1 + (np.random.random_sample(
+                prediction[0][0].shape) - 0.5) * 2 * 0.3
 
         s = np.reshape(prediction[0][0], (1, 1, NP))
         print('Gen {}/{}, prediction.shape: {}'.format(
@@ -94,6 +93,38 @@ if GEN:
 else:
     # synthesis from seed only
     output = np.reshape(seed_seq, (seed_seq.shape[1], seed_seq.shape[2]))
+
+
+
+
+
+
+# DECODE and RESHAPE to (None, NP)
+print 'DECODE and RESHAPE to (None, NP)'
+from model.get_autoencoder import get_encoder
+
+autoencoder, encoder, decoder = get_encoder(10, weights_file+'CONV')
+
+print '1output.shape: {}'.format(output.shape)
+output = decoder.predict(output)
+print '2output.shape: {}'.format(output.shape)
+
+new_output = np.zeros((output.shape[0]*output.shape[1], output.shape[2]))
+for i in range(output.shape[0]):
+    for j in range(output.shape[1]):
+        new_output[output.shape[1]*i+j, :] = output[i, j]
+
+output = new_output
+print '3output.shape: {}'.format(output.shape)
+print 'Start synth'
+
+
+
+
+
+
+
+
 
 output = var_data * output + shift_data
 np.savetxt(os.path.join(data_dir, 'out_data.txt'), output, fmt='%6.2f', delimiter=',')

@@ -50,7 +50,7 @@ def dftModel(x, w, N):
     return y
 
 
-def dftAnal(x, w, N):
+def dftAnal(x, w, N, db=True, zero_phase_windowing=True):
     """
     Analysis of a signal using the discrete Fourier transform
     x: input signal, w: analysis window, N: FFT size
@@ -64,19 +64,32 @@ def dftAnal(x, w, N):
         raise ValueError("Window size (M) is bigger than FFT size")
 
     hN = (N / 2) + 1  # size of positive spectrum, it includes sample 0
-    hM1 = int(
-        math.floor((w.size + 1) / 2))  # half analysis window size by rounding
-    hM2 = int(math.floor(w.size / 2))  # half analysis window size by floor
-    fftbuffer = np.zeros(N)  # initialize buffer for FFT
     w = w / sum(w)  # normalize analysis window
     xw = x * w  # window the input sound
-    fftbuffer[:hM1] = xw[hM2:]  # zero-phase window in fftbuffer
-    fftbuffer[-hM2:] = xw[:hM2]
+
+    fftbuffer = np.zeros(N)  # initialize buffer for FFT
+    if zero_phase_windowing:
+        hM1 = int(math.floor(
+                (w.size + 1) / 2))  # half analysis window size by rounding
+        hM2 = int(math.floor(w.size / 2))  # half analysis window size by floor
+        fftbuffer[:hM1] = xw[hM2:]  # zero-phase window in fftbuffer
+        fftbuffer[-hM2:] = xw[:hM2]
+    else:
+        fftbuffer[:] = xw
+
+    # print 'dft x: {}'.format(x)
+    # print 'dft w: {}'.format(w)
+    # print 'dft xw: {}'.format(xw)
+    # print 'dft fftbuffer: {}'.format(fftbuffer)
+
     X = fft(fftbuffer)  # compute FFT
-    absX = abs(X[:hN])  # compute ansolute value of positive side
+    absX = abs(X[:hN])  # compute absolute value of positive side
     absX[absX < np.finfo(float).eps] = np.finfo(
         float).eps  # if zeros add epsilon to handle log
-    mX = 20 * np.log10(absX)  # magnitude spectrum of positive frequencies in dB
+    if db:
+        mX = 20 * np.log10(absX)  # magnitude spectrum of positive frequencies in dB
+    else:
+        mX = absX
     X[:hN].real[np.abs(X[
                        :hN].real) < tol] = 0.0  # for phase calculation set to 0 the small values
     X[:hN].imag[np.abs(X[
@@ -101,7 +114,6 @@ def dftSynth(mX, pX, M):
 
     hM1 = int(math.floor((M + 1) / 2))  # half analysis window size by rounding
     hM2 = int(math.floor(M / 2))  # half analysis window size by floor
-    fftbuffer = np.zeros(N)  # initialize buffer for FFT
     y = np.zeros(M)  # initialize output array
     Y = np.zeros(N, dtype=complex)  # clean output spectrum
     Y[:hN] = 10 ** (mX / 20) * np.exp(1j * pX)  # generate positive frequencies
